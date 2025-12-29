@@ -1,0 +1,16 @@
+.feed-card {
+  border-radius: 12px;
+  transition: 0.2s ease-in-out;
+}
+
+.feed-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 18px rgba(0,0,0,0.1);
+}
+
+.feed-profile-img {
+  width: 45px;
+  height: 45px;
+  object-fit: cover;
+  border: 2px solid #ddd;
+}

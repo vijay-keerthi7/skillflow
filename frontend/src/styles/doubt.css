@@ -1,0 +1,38 @@
+.doubt-card {
+  border-radius: 14px;
+  transition: 0.2s ease-in-out;
+}
+
+.doubt-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 22px rgba(0,0,0,0.12);
+}
+
+.doubt-image {
+  width: 100%;
+  border-radius: 12px;
+  object-fit: cover;
+  background: #f8f9fa;
+}
+
+.action-group {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.action-icon {
+  font-size: 22px;
+  cursor: pointer;
+  transition: 0.3s;
+}
+
+.action-icon:hover {
+  transform: scale(1.2);
+  color: #0d6efd;
+}
+
+.count {
+  font-size: 14px;
+  font-weight: 600;
+}
