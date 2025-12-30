@@ -1,99 +1,56 @@
-import React,{ createContext} from "react";
-export const usersContext= createContext();
+import React, { createContext, useState, useEffect } from "react";
+import axios from "axios";
+import { io } from "socket.io-client";
+export const usersContext = createContext();
 
-const UsersProvider=({children})=>{
-    const users=
-[
-  {
-    "id": 1,
-    "name": "Arjun Mehta",
-    "username": "arjun_codes",
-    "profilepic": "https://i.pravatar.cc/150?u=arjun",
-    "status": "online",
-    "lastseen": "Active now"
-  },
-  {
-    "id": 2,
-    "name": "Ananya Sharma",
-    "username": "ananya_pixels",
-    "profilepic": "https://i.pravatar.cc/150?u=ananya",
-    "status": "offline",
-    "lastseen": "2 hours ago"
-  },
-  {
-    "id": 3,
-    "name": "Vihaan Iyer",
-    "username": "vihaan_vibe",
-    "profilepic": "https://i.pravatar.cc/150?u=vihaan",
-    "status": "online",
-    "lastseen": "Active now"
-  },
-  {
-    "id": 4,
-    "name": "Saanvi Kulkarni",
-    "username": "saanvi_writes",
-    "profilepic": "https://i.pravatar.cc/150?u=saanvi",
-    "status": "offline",
-    "lastseen": "Yesterday at 10:30 PM"
-  },
-  {
-    "id": 5,
-    "name": "Rohan Malhotra",
-    "username": "rohan_travels",
-    "profilepic": "https://i.pravatar.cc/150?u=rohan",
-    "status": "online",
-    "lastseen": "Active now"
-  },
-  {
-    "id": 6,
-    "name": "Ishani Das",
-    "username": "ishani_d",
-    "profilepic": "https://i.pravatar.cc/150?u=ishani",
-    "status": "offline",
-    "lastseen": "5 mins ago"
-  },
-  {
-    "id": 7,
-    "name": "Aditya Reddy",
-    "username": "adi_techie",
-    "profilepic": "https://i.pravatar.cc/150?u=aditya",
-    "status": "online",
-    "lastseen": "Active now"
-  },
-  {
-    "id": 8,
-    "name": "Kavya Nair",
-    "username": "kavya_art",
-    "profilepic": "https://i.pravatar.cc/150?u=kavya",
-    "status": "offline",
-    "lastseen": "3 days ago"
-  },
-  {
-    "id": 9,
-    "name": "Kabir Singh",
-    "username": "kabir_fitness",
-    "profilepic": "https://i.pravatar.cc/150?u=kabir",
-    "status": "online",
-    "lastseen": "Active now"
-  },
-  {
-    "id": 10,
-    "name": "Diya Mukherjee",
-    "username": "diya_m",
-    "profilepic": "https://i.pravatar.cc/150?u=diya",
-    "status": "offline",
-    "lastseen": "45 mins ago"
-  }
-];
-  
+const UsersProvider = ({ children }) => {
+    // 1. Change 'users' from a variable to State
+    const [users, setUsers] = useState([]);
+    const [loading, setLoading] = useState(true);
+const [onlineUsers, setOnlineUsers] = useState([]); // New state for real-time status
+const currentUser = JSON.parse(localStorage.getItem('skillflow_user'));
+
+    useEffect(() => {
+    if (currentUser) {
+      // Connect to socket globally for presence
+      const socket = io("http://localhost:5000", {
+        query: { userId: currentUser._id || currentUser.id }
+      });
+
+      // Listen for the list of online user IDs from the server
+      socket.on("getOnlineUsers", (users) => {
+        setOnlineUsers(users);
+      });
+
+      return () => socket.close();
+    }
+  }, []);
+
+
+    useEffect(() => {
+        const fetchUsers = async () => {
+            try {
+                // 2. Fetch from your backend
+                const res = await axios.get('http://localhost:5000/api/auth/all-users');
+                
+                // 3. Update the state with real DB users
+                setUsers(res.data);
+            } catch (error) {
+                console.error("Error fetching users from DB:", error);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchUsers();
+    }, []);
 
     return (
-        <usersContext.Provider value={users}>
+        // 4. Pass users (and loading if you want) to the provider
+        <usersContext.Provider value={{ users, loading ,onlineUsers }}>
             {children}
         </usersContext.Provider>
     );
-
 };
 
 export default UsersProvider;
-
