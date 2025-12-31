@@ -25,11 +25,7 @@ const allowedOrigin = process.env.NODE_ENV === 'production'
     ? "https://skillflow-cndsh4cjargth6dp.canadacentral-01.azurewebsites.net" 
     : "http://localhost:3000";
 
-app.use(cors({
-    origin: allowedOrigin,
-    credentials: true
-}));
-
+app.use(cors({ origin: allowedOrigin, credentials: true }));
 app.use(express.json({ limit: '15mb' })); 
 app.use(express.urlencoded({ limit: '15mb', extended: true }));
 
@@ -114,12 +110,12 @@ app.use('/api/messages', messageRoutes);
 
 // --- 6. FRONTEND SERVING (REWRITTEN PATH) ---
 // Since index.js is now in the ROOT, we go directly into frontend/build
-const buildPath = path.join(__dirname, "frontend", "build");
 
-app.use(express.static(buildPath));
+
+app.use(express.static("./frontend/build"));
 
 app.get("*", (req, res) => {
-    res.sendFile(path.join(buildPath, "index.html"));
+    res.sendFile(path.resolve(__dirname, "frontend","build","index.html"));
 });
 
 // --- 7. SERVER START ---
