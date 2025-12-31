@@ -9,6 +9,14 @@ import authRoutes from './routes/authRoutes.js';
 import messageRoutes from './routes/messageRoutes.js';
 import Message from './models/Message.js';
 import path from 'path';
+import { fileURLToPath } from 'url';
+
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Now your existing code will work:
+const buildPath = path.join(__dirname, "..", "frontend", "build");
 
 dotenv.config();
 const app = express();
