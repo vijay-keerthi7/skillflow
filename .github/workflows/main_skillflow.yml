@@ -35,6 +35,7 @@ jobs:
         run: npm run build
         working-directory: ./frontend
         env:
+          CI: false
           REACT_APP_API_URL: https://skillflow-cndsh4cjargth6dp.canadacentral-01.azurewebsites.net
 
       - name: Upload artifact for deployment job
