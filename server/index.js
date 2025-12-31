@@ -4,7 +4,7 @@ import cors from 'cors';
 import mongoose from 'mongoose';
 import http from 'http';
 import { Server } from 'socket.io';
-
+import path from 'path';
 // Route Imports
 import authRoutes from './routes/authRoutes.js';
 import messageRoutes from './routes/messageRoutes.js';
@@ -111,11 +111,13 @@ app.use('/api/messages', messageRoutes);
 
 
 
-app.use(express.static("./frontend/build"));
-app.get("*",(req,res)=>{
-  res.sendFile(path.resolve(__dirname,"frontend","build","index.html"))
-});
+const buildPath = path.join(__dirname, "..", "frontend", "build");
 
+app.use(express.static(buildPath));
+
+app.get("*", (req, res) => {
+  res.sendFile(path.join(buildPath, "index.html"));
+});
 
 // 6. SERVER START
 const PORT = process.env.PORT || 5000;

@@ -1,0 +1,10 @@
+{
+  "name": "skillflow-main",
+  "version": "1.0.0",
+  "scripts": {
+    "start": "node backend/index.js",
+    "install-backend": "npm install --prefix backend",
+    "install-frontend": "npm install --prefix frontend",
+    "build-frontend": "npm run build --prefix frontend"
+  }
+}
