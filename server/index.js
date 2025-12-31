@@ -9,6 +9,7 @@ import { Server } from 'socket.io';
 import authRoutes from './routes/authRoutes.js';
 import messageRoutes from './routes/messageRoutes.js';
 import Message from './models/Message.js';
+import path from 'path';
 
 dotenv.config();
 const app = express();
@@ -107,6 +108,14 @@ mongoose.connect(process.env.MONGO_URI)
 app.get('/', (req, res) => res.send('SkillFlow Real-time Server Running! 🚀'));
 app.use('/api/auth', authRoutes);
 app.use('/api/messages', messageRoutes);
+
+
+
+app.use(express.static("./frontend/build"));
+app.get("*",(req,res)=>{
+  res.sendFile(path.resolve(__dirname,"frontend","build","index.html"))
+});
+
 
 // 6. SERVER START
 const PORT = process.env.PORT || 5000;
