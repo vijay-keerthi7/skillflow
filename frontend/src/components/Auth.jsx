@@ -20,11 +20,11 @@ const Auth = () => {
     try {
       if (isLogin) {
         // LOGIN LOGIC
-        const response = await axios.post('http://localhost:5000/api/auth/login', {
+        const response = await axios.post(`${process.env.REACT_APP_API_URL}/auth/login`, {
           email: formData.email,
           password: formData.password
         });
-       const res = await axios.post('http://localhost:5000/api/auth/login', formData);
+       const res = await axios.post(`${process.env.REACT_APP_API_URL}/auth/login`, formData);
         console.log(res.data.token);
   // Save to LocalStorage
   localStorage.setItem('skillflow_token', res.data.token);
@@ -36,7 +36,7 @@ const Auth = () => {
   navigate('/');
       } else {
         // REGISTER LOGIC
-        const response = await axios.post('http://localhost:5000/api/auth/register', formData);
+        const response = await axios.post(`${process.env.REACT_APP_API_URL}auth/register`, formData);
         console.log("Registration Success:", response.data);
         alert("Account created! Now please login.");
         setIsLogin(true); // Switch to login view

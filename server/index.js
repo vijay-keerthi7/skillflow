@@ -13,96 +13,103 @@ import Message from './models/Message.js';
 dotenv.config();
 const app = express();
 
-// 1. Middleware (Must come before Routes)
-app.use(express.json());
+// 1. GLOBAL SETTINGS (Crucial for Camera/Images)
 app.use(cors({
     origin: "http://localhost:3000",
     credentials: true
 }));
+app.use(express.json({ limit: '15mb' })); 
+app.use(express.urlencoded({ limit: '15mb', extended: true }));
 
-// 2. Create HTTP Server & Initialize Socket.io
-const server = http.createServer(app);
-const io = new Server(server, {
-  cors: {
-    origin: "http://localhost:3000",
-    methods: ["GET", "POST"]
-  }
-});
-
-// 3. User Tracking Logic
+// 2. SOCKET SETUP & USER TRACKING
 const userSocketMap = {}; // { userId: socketId }
 
-io.on('connection', (socket) => {
-  const userId = socket.handshake.query.userId;
-  
-  if (userId && userId !== "undefined") {
-    userSocketMap[userId] = socket.id;
-    console.log(`✅ User ${userId} online (Socket: ${socket.id})`);
-  }
-
-  // Broadcast online users list
-  io.emit("getOnlineUsers", Object.keys(userSocketMap));
-
-  // --- TYPING LOGIC ---
-  socket.on("typing", ({ senderId, receiverId }) => {
-    const receiverSocketId = userSocketMap[receiverId];
-    if (receiverSocketId) {
-      io.to(receiverSocketId).emit("typing", { senderId });
+const server = http.createServer(app);
+const io = new Server(server, {
+    cors: {
+        origin: "http://localhost:3000",
+        methods: ["GET", "POST"]
     }
-  });
-
-  socket.on("stopTyping", ({ senderId, receiverId }) => {
-    const receiverSocketId = userSocketMap[receiverId];
-    if (receiverSocketId) {
-      io.to(receiverSocketId).emit("stopTyping", { senderId });
-    }
-  });
-
-  // --- READ RECEIPTS LOGIC ---
-  socket.on("markAsRead", async ({ senderId, receiverId }) => {
-    try {
-      // senderId = The one who sent the message (A)
-      // receiverId = The one currently viewing the message (B)
-      
-      await Message.updateMany(
-        { senderId: senderId, receiverId: receiverId, status: { $ne: 'read' } },
-        { $set: { status: 'read' } }
-      );
-
-      // Notify the sender (A) that their messages were read by (B)
-      const senderSocketId = userSocketMap[senderId];
-      if (senderSocketId) {
-        io.to(senderSocketId).emit("messagesRead", { readerId: receiverId });
-      }
-    } catch (err) {
-      console.error("❌ Error in markAsRead socket:", err);
-    }
-  });
-
-  // --- DISCONNECT ---
-  socket.on('disconnect', () => {
-    if (userId) {
-      console.log(`❌ User ${userId} disconnected`);
-      delete userSocketMap[userId];
-      io.emit("getOnlineUsers", Object.keys(userSocketMap));
-    }
-  });
 });
 
-// 4. DB Connection
-mongoose.connect(process.env.MONGO_URI)
-  .then(() => console.log("Connected to SkillFlow Database ✅"))
-  .catch((err) => console.log("DB Connection Error: ", err));
+// Export so routes/controllers can use them
+export { io, userSocketMap };
 
-// 5. Routes
+// 3. SOCKET EVENT LISTENERS
+io.on('connection', (socket) => {
+    const userId = socket.handshake.query.userId;
+    if (userId && userId !== "undefined") {
+        userSocketMap[userId] = socket.id;
+        console.log(`✅ User connected: ${userId}`);
+    }
+
+    // Online Users
+    io.emit("getOnlineUsers", Object.keys(userSocketMap));
+
+    // --- TYPING INDICATORS ---
+    socket.on("typing", ({ senderId, receiverId }) => {
+        const target = userSocketMap[receiverId];
+        if (target) io.to(target).emit("typing", { senderId });
+    });
+
+    socket.on("stopTyping", ({ senderId, receiverId }) => {
+        const target = userSocketMap[receiverId];
+        if (target) io.to(target).emit("stopTyping", { senderId });
+    });
+
+    // --- READ RECEIPTS ---
+    socket.on("markAsRead", async ({ senderId, receiverId }) => {
+        try {
+            await Message.updateMany(
+                { senderId, receiverId, status: { $ne: 'read' } },
+                { $set: { status: 'read' } }
+            );
+            const target = userSocketMap[senderId];
+            if (target) io.to(target).emit("messagesRead", { readerId: receiverId });
+        } catch (err) {
+            console.error("Read Receipt Error:", err);
+        }
+    });
+
+    // --- PROFILE UPDATES ---
+    socket.on("updateProfile", (updatedUser) => {
+        socket.broadcast.emit("userProfileUpdated", updatedUser);
+    });
+
+    // --- DELETE MESSAGE ---
+    socket.on("deleteMessage", async ({ messageId, receiverId }) => {
+        try {
+            await Message.findByIdAndDelete(messageId);
+            const target = userSocketMap[receiverId];
+            if (target) io.to(target).emit("messageDeleted", { messageId });
+            socket.emit("messageDeleted", { messageId });
+        } catch (err) {
+            console.error("Delete Error:", err);
+        }
+    });
+
+    // --- DISCONNECT ---
+    socket.on('disconnect', () => {
+        if (userId) {
+            delete userSocketMap[userId];
+            io.emit("getOnlineUsers", Object.keys(userSocketMap));
+            console.log(`❌ User disconnected: ${userId}`);
+        }
+    });
+});
+
+// 4. DB CONNECTION
+mongoose.connect(process.env.MONGO_URI)
+    .then(() => console.log("Connected to SkillFlow Database ✅"))
+    .catch((err) => console.log("DB Connection Error: ", err));
+
+// 5. ROUTES
 app.get('/', (req, res) => res.send('SkillFlow Real-time Server Running! 🚀'));
 app.use('/api/auth', authRoutes);
 app.use('/api/messages', messageRoutes);
 
-// 6. Exports & Server Start
-export { app, io, userSocketMap };
-
+// 6. SERVER START
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => {
-  console.log(`🚀 Server listening on port ${PORT}`);
+    console.log(`🚀 Server listening on port ${PORT}`);
 });

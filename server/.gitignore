@@ -1,7 +1,24 @@
-/node_modules
-# misc
+# Dependencies
+node_modules/
+
+# Environment Variables (CRITICAL)
+.env
+.env.test
+.env.production
+
+# Compiled code
+dist/
+build/
+
+# Logs
+logs
+*.log
+npm-debug.log*
+
+# Database (if using local SQLite or temp files)
+*.db
+*.sqlite
+
+# System files
 .DS_Store
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
+.vscode/

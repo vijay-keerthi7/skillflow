@@ -2,7 +2,7 @@ import express from 'express';
 import User from '../models/User.js';
 import bcrypt from 'bcryptjs'; // To hide passwords safely
 import jwt from 'jsonwebtoken';
-
+import Message from '../models/Message.js'; // <--- ADD THIS LINE
 const router = express.Router();
 
 router.post('/register', async (req, res) => {
@@ -59,13 +59,70 @@ router.post('/login', async (req, res) => {
   }
 });
 
-router.get('/all-users', async (req, res) => {
+router.get('/all-users/:myId', async (req, res) => {
   try {
-    // Find all users but don't send their passwords!
-    const users = await User.find().select('-password'); 
-    res.status(200).json(users);
+    const { myId } = req.params;
+
+    // 1. Fetch all users except yourself
+    const users = await User.find({ _id: { $ne: myId } }).select('-password');
+
+    // 2. Map through users to find relationship data
+    const usersWithMeta = await Promise.all(
+      users.map(async (user) => {
+        // Find the most recent message between you and this user
+        const lastMsg = await Message.findOne({
+          $or: [
+            { senderId: myId, receiverId: user._id },
+            { senderId: user._id, receiverId: myId }
+          ]
+        }).sort({ createdAt: -1 });
+
+        // Count unread messages sent BY this user TO you
+        const unreadCount = await Message.countDocuments({
+          senderId: user._id,
+          receiverId: myId,
+          status: { $ne: 'read' }
+        });
+
+        return {
+          ...user._doc, // Spreads original user data
+          lastMessage: lastMsg ? lastMsg.text : "No messages yet",
+          lastMessageTime: lastMsg ? lastMsg.createdAt : null,
+          unreadCount: unreadCount
+        };
+      })
+    );
+
+    // 3. Sort by lastMessageTime (Newest chats at the top)
+    usersWithMeta.sort((a, b) => {
+  return new Date(b.lastMessageTime) - new Date(a.lastMessageTime);
+});
+res.status(200).json(usersWithMeta);
   } catch (error) {
+    console.error("Error fetching users with meta:", error);
     res.status(500).json({ message: "Error fetching users" });
+  }
+});
+
+
+
+
+// routes/authRoutes.js
+router.put('/update-profile', async (req, res) => {
+  try {
+    const { userId, name, profilepic, bio } = req.body;
+
+    const updatedUser = await User.findByIdAndUpdate(
+      userId,
+      { name, profilepic, bio },
+      { new: true } // Returns the updated document
+    );
+
+    if (!updatedUser) return res.status(404).json({ message: "User not found" });
+
+    res.status(200).json(updatedUser);
+  } catch (error) {
+    res.status(500).json({ message: "Update failed", error });
   }
 });
 

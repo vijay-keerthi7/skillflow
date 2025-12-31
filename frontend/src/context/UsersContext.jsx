@@ -1,53 +1,80 @@
-import React, { createContext, useState, useEffect } from "react";
-import axios from "axios";
+import React, { createContext, useState, useEffect, useRef } from "react";
 import { io } from "socket.io-client";
+import axios from "axios";
+
 export const usersContext = createContext();
 
 const UsersProvider = ({ children }) => {
-    // 1. Change 'users' from a variable to State
     const [users, setUsers] = useState([]);
+    const [onlineUsers, setOnlineUsers] = useState([]);
     const [loading, setLoading] = useState(true);
-const [onlineUsers, setOnlineUsers] = useState([]); // New state for real-time status
-const currentUser = JSON.parse(localStorage.getItem('skillflow_user'));
+    const socket = useRef(null);
 
+    const currentUser = JSON.parse(localStorage.getItem('skillflow_user'));
+    const currentUserId = currentUser?._id || currentUser?.id;
+
+    // 1. Initial Fetch & Socket Connection
     useEffect(() => {
-    if (currentUser) {
-      // Connect to socket globally for presence
-      const socket = io("http://localhost:5000", {
-        query: { userId: currentUser._id || currentUser.id }
-      });
+        if (!currentUserId) return;
 
-      // Listen for the list of online user IDs from the server
-      socket.on("getOnlineUsers", (users) => {
-        setOnlineUsers(users);
-      });
-
-      return () => socket.close();
-    }
-  }, []);
-
-
-    useEffect(() => {
         const fetchUsers = async () => {
             try {
-                // 2. Fetch from your backend
-                const res = await axios.get('http://localhost:5000/api/auth/all-users');
-                
-                // 3. Update the state with real DB users
+                // Fixed: process.env added
+                const res = await axios.get(`${process.env.REACT_APP_API_URL}/auth/all-users/${currentUserId}`);
                 setUsers(res.data);
-            } catch (error) {
-                console.error("Error fetching users from DB:", error);
+            } catch (err) {
+                console.error("Error fetching users:", err);
             } finally {
                 setLoading(false);
             }
         };
-
         fetchUsers();
-    }, []);
+
+        // FIXED: Added process.env. and removed unnecessary template literal backticks
+        // Also added a fallback to localhost:5000 just in case
+        const socketUrl = process.env.REACT_APP_SOCKET_URL || "http://localhost:5000";
+        
+        socket.current = io(socketUrl, {
+            query: { userId: currentUserId }
+        });
+
+        socket.current.on("getOnlineUsers", (userIds) => setOnlineUsers(userIds));
+
+        return () => {
+            if (socket.current) {
+                socket.current.off("getOnlineUsers");
+                socket.current.disconnect();
+            }
+        };
+    }, [currentUserId]);
+
+    // 2. Real-time Events (Global state management)
+    useEffect(() => {
+        if (!socket.current || !currentUserId) return;
+
+        const handleProfileUpdate = (updatedUser) => {
+            setUsers((prevUsers) => 
+                prevUsers.map((u) => u._id === updatedUser._id ? { ...u, ...updatedUser } : u)
+            );
+        };
+
+        const handleMessagesRead = ({ readerId }) => {
+            setUsers((prevUsers) => 
+                prevUsers.map((u) => u._id === readerId ? { ...u, lastMessageStatus: 'read' } : u)
+            );
+        };
+
+        socket.current.on("userProfileUpdated", handleProfileUpdate);
+        socket.current.on("messagesRead", handleMessagesRead);
+        
+        return () => {
+            socket.current?.off("userProfileUpdated", handleProfileUpdate);
+            socket.current?.off("messagesRead", handleMessagesRead);
+        };
+    }, [currentUserId, socket.current]); // Added socket.current to dependency
 
     return (
-        // 4. Pass users (and loading if you want) to the provider
-        <usersContext.Provider value={{ users, loading ,onlineUsers }}>
+        <usersContext.Provider value={{ users, setUsers, loading, onlineUsers, socket: socket.current }}>
             {children}
         </usersContext.Provider>
     );
