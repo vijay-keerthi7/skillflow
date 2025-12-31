@@ -139,7 +139,7 @@ const { setUsers, socket } = useContext(usersContext);
                 <div 
                   onClick={() => {
                     localStorage.removeItem('skillflow_user');
-                    window.location.href = '/login';
+                    window.location.href = '/auth';
                   }} 
                   className="flex items-center gap-4 text-rose-400 hover:text-rose-300 cursor-pointer transition-colors"
                 >
