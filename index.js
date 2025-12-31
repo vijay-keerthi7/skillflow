@@ -4,46 +4,49 @@ import cors from 'cors';
 import mongoose from 'mongoose';
 import http from 'http';
 import { Server } from 'socket.io';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
 // Route Imports
 import authRoutes from './routes/authRoutes.js';
 import messageRoutes from './routes/messageRoutes.js';
 import Message from './models/Message.js';
-import path from 'path';
-import { fileURLToPath } from 'url';
 
-
+// --- ES MODULE FIX FOR __dirname ---
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-
-// Now your existing code will work:
-const buildPath = path.join(__dirname, "..", "frontend", "build");
 
 dotenv.config();
 const app = express();
 
-// 1. GLOBAL SETTINGS (Crucial for Camera/Images)
+// --- 1. MIDDLEWARE & DYNAMIC CORS ---
+// If on Azure, we allow the Azure URL, otherwise localhost
+const allowedOrigin = process.env.NODE_ENV === 'production' 
+    ? "https://skillflow-cndsh4cjargth6dp.canadacentral-01.azurewebsites.net" 
+    : "http://localhost:3000";
+
 app.use(cors({
-    origin: "http://localhost:3000",
+    origin: allowedOrigin,
     credentials: true
 }));
+
 app.use(express.json({ limit: '15mb' })); 
 app.use(express.urlencoded({ limit: '15mb', extended: true }));
 
-// 2. SOCKET SETUP & USER TRACKING
-const userSocketMap = {}; // { userId: socketId }
+// --- 2. SOCKET SETUP & USER TRACKING ---
+const userSocketMap = {}; 
 
 const server = http.createServer(app);
 const io = new Server(server, {
     cors: {
-        origin: "http://localhost:3000",
+        origin: allowedOrigin,
         methods: ["GET", "POST"]
     }
 });
 
-// Export so routes/controllers can use them
 export { io, userSocketMap };
 
-// 3. SOCKET EVENT LISTENERS
+// --- 3. SOCKET EVENT LISTENERS ---
 io.on('connection', (socket) => {
     const userId = socket.handshake.query.userId;
     if (userId && userId !== "undefined") {
@@ -51,10 +54,8 @@ io.on('connection', (socket) => {
         console.log(`✅ User connected: ${userId}`);
     }
 
-    // Online Users
     io.emit("getOnlineUsers", Object.keys(userSocketMap));
 
-    // --- TYPING INDICATORS ---
     socket.on("typing", ({ senderId, receiverId }) => {
         const target = userSocketMap[receiverId];
         if (target) io.to(target).emit("typing", { senderId });
@@ -65,7 +66,6 @@ io.on('connection', (socket) => {
         if (target) io.to(target).emit("stopTyping", { senderId });
     });
 
-    // --- READ RECEIPTS ---
     socket.on("markAsRead", async ({ senderId, receiverId }) => {
         try {
             await Message.updateMany(
@@ -79,12 +79,10 @@ io.on('connection', (socket) => {
         }
     });
 
-    // --- PROFILE UPDATES ---
     socket.on("updateProfile", (updatedUser) => {
         socket.broadcast.emit("userProfileUpdated", updatedUser);
     });
 
-    // --- DELETE MESSAGE ---
     socket.on("deleteMessage", async ({ messageId, receiverId }) => {
         try {
             await Message.findByIdAndDelete(messageId);
@@ -96,7 +94,6 @@ io.on('connection', (socket) => {
         }
     });
 
-    // --- DISCONNECT ---
     socket.on('disconnect', () => {
         if (userId) {
             delete userSocketMap[userId];
@@ -106,28 +103,27 @@ io.on('connection', (socket) => {
     });
 });
 
-// 4. DB CONNECTION
+// --- 4. DB CONNECTION ---
 mongoose.connect(process.env.MONGO_URI)
     .then(() => console.log("Connected to SkillFlow Database ✅"))
     .catch((err) => console.log("DB Connection Error: ", err));
 
-// 5. ROUTES
-app.get('/', (req, res) => res.send('SkillFlow Real-time Server Running! 🚀'));
+// --- 5. ROUTES ---
 app.use('/api/auth', authRoutes);
 app.use('/api/messages', messageRoutes);
 
-
-
-const buildPath = path.join(__dirname, "..", "frontend", "build");
+// --- 6. FRONTEND SERVING (REWRITTEN PATH) ---
+// Since index.js is now in the ROOT, we go directly into frontend/build
+const buildPath = path.join(__dirname, "frontend", "build");
 
 app.use(express.static(buildPath));
 
 app.get("*", (req, res) => {
-  res.sendFile(path.join(buildPath, "index.html"));
+    res.sendFile(path.join(buildPath, "index.html"));
 });
 
-// 6. SERVER START
-const PORT = process.env.PORT || 5000;
+// --- 7. SERVER START ---
+const PORT = process.env.PORT || 8080; // Azure prefers 8080
 server.listen(PORT, () => {
     console.log(`🚀 Server listening on port ${PORT}`);
 });

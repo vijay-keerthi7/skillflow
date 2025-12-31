@@ -1,10 +1,30 @@
 {
-  "name": "skillflow-main",
+  "name": "skillflow-server",
   "version": "1.0.0",
+  "type": "module",
+  "description": "SkillFlow Real-time Chat Application",
+  "main": "index.js",
   "scripts": {
-    "start": "node backend/index.js",
-    "install-backend": "npm install --prefix backend",
-    "install-frontend": "npm install --prefix frontend",
-    "build-frontend": "npm run build --prefix frontend"
+    "start": "node index.js",
+    "dev": "nodemon index.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.3",
+    "express": "^5.0.0",
+    "jsonwebtoken": "^9.0.2",
+    "mongoose": "^8.0.0",
+    "socket.io": "^4.8.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.7"
   }
 }
