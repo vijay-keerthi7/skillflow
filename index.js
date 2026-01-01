@@ -42,7 +42,6 @@ io.on("connection", (socket) => {
       io.emit("getOnlineUsers", Object.keys(userSocketMap));
     }
   });
-  // ... (rest of your socket events)
 });
 
 // ----------- Database -----------
@@ -54,15 +53,23 @@ mongoose.connect(process.env.MONGO_URI)
 app.use("/api/auth", authRoutes);
 app.use("/api/messages", messageRoutes);
 
-// ----------- Serve React Frontend (ORDER MATTERS) -----------
+// ----------- Serve React Frontend -----------
 const frontendPath = path.resolve(__dirname, "frontend", "build");
 
-// 1. Serve static files FIRST
+// 1. Force Azure to find the JS/CSS files by explicitly mapping the static folder
+app.use("/static", express.static(path.join(frontendPath, "static")));
+
+// 2. Serve the rest of the build folder (favicons, manifest, etc.)
 app.use(express.static(frontendPath));
 
-// 2. Fallback for React Router (Express 5 Regex)
-// This serves index.html for any request that is NOT an API call
-app.get(/^(?!\/api).+/, (req, res) => {
+// 3. FALLBACK: Only serve index.html if the request is NOT for a file (no dot in filename)
+// and NOT an API call. This prevents serving HTML for missing .js files.
+app.get(/^(?!\/api|.*\.).+/, (req, res) => {
+  res.sendFile(path.join(frontendPath, "index.html"));
+});
+
+// For the root path "/"
+app.get("/", (req, res) => {
   res.sendFile(path.join(frontendPath, "index.html"));
 });
 
