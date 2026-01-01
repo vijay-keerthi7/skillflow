@@ -119,8 +119,8 @@ app.use(express.static("./frontend/build"));
 app.use(express.static(path.join(__dirname, 'frontend', 'build')));
 // 3. Catch-all for React Router
 // This ensures that any deep links (like /login or /profile) return index.html
-app.get('*', (req, res) => {
-    res.sendFile(path.join(__dirname, 'frontend', 'build', 'index.html'));
+app.get('/*path', (req, res) => { 
+  res.sendFile(path.join(__dirname, 'frontend', 'build', 'index.html'));
 });
 
 // --- 7. SERVER START ---
