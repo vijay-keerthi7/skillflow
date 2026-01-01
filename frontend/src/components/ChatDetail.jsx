@@ -262,7 +262,7 @@ const handleImageSend = async (base64Data) => {
     {isMe && <span className="flex items-center">{getTickIcon(msg)}</span>}
   </div>
 
-  {/* Hover Delete Button (Trash) */}
+  {/* Hover Delete Button (Trash)  to delete */}
   {isMe && (
     <button 
       onClick={() => handleDeleteMessage(msg._id || msg.id)}
@@ -272,7 +272,7 @@ const handleImageSend = async (base64Data) => {
     </button>
   )} 
 </div>
-      </React.Fragment>
+      </React.Fragment> 
     );
   })}
   <div ref={scrollRef} />
