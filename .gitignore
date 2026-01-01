@@ -8,7 +8,7 @@ node_modules/
 
 # Compiled code
 dist/
-frontend/build
+# frontend/build
 
 # Logs
 logs
