@@ -110,7 +110,7 @@ const frontendPath = path.resolve(__dirname, "frontend", "build");
 app.use(express.static(frontendPath));
 
 // FIX: Changed "*" to "/*" to support Express 5 / path-to-regexp strictness
-app.get("/*", (req, res) => {
+app.get("/:path*", (req, res) => {
   res.sendFile(path.join(frontendPath, "index.html"), (err) => {
     if (err) {
       res.status(500).send("Error loading index.html: " + err.message);
