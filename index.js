@@ -30,21 +30,16 @@ app.use(cors({ origin: true, credentials: true }));
 const server = http.createServer(app);
 const io = new Server(server, { cors: { origin: true, credentials: true } });
 
-// Define the map
 const userSocketMap = {}; 
-
-// SINGLE EXPORT
 export { io, userSocketMap };
 
 // ----------- Socket Logic -----------
 io.on("connection", (socket) => {
   const { userId } = socket.handshake.query;
-
   if (userId && userId !== "undefined") {
     userSocketMap[userId] = socket.id;
     console.log(`✅ User connected: ${userId}`);
   }
-
   io.emit("getOnlineUsers", Object.keys(userSocketMap));
 
   socket.on("typing", ({ senderId, receiverId }) => {
@@ -106,12 +101,19 @@ app.use("/api/messages", messageRoutes);
 
 // ----------- Serve React Frontend -----------
 const frontendPath = path.resolve(__dirname, "frontend", "build");
+
+// 1. Serve static files explicitly
 app.use(express.static(frontendPath));
 
-// ----------- FIX FOR EXPRESS 5 -----------
-// This regex matches any path and serves the index.html
+// 2. Catch-all for React Router (Express 5 Regex Fix)
+// This ensures any URL that is NOT an API call sends index.html
 app.get(/^(?!\/api).+/, (req, res) => {
-  res.sendFile(path.join(frontendPath, "index.html"));
+  res.sendFile(path.join(frontendPath, "index.html"), (err) => {
+    if (err) {
+      console.error("File sent error:", err);
+      res.status(500).send("Error loading frontend. Verify 'frontend/build' exists.");
+    }
+  });
 });
 
 // ----------- Start Server -----------
