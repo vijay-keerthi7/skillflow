@@ -35,7 +35,6 @@ io.on("connection", (socket) => {
     userSocketMap[userId] = socket.id;
   }
   io.emit("getOnlineUsers", Object.keys(userSocketMap));
-
   socket.on("disconnect", () => {
     if (userId) {
       delete userSocketMap[userId];
@@ -54,22 +53,22 @@ app.use("/api/auth", authRoutes);
 app.use("/api/messages", messageRoutes);
 
 // ----------- Serve React Frontend -----------
-const frontendPath = path.resolve(__dirname, "frontend", "build");
+// Use path.join for Windows compatibility
+const frontendPath = path.join(__dirname, "frontend", "build");
 
-// 1. Force Azure to find the JS/CSS files by explicitly mapping the static folder
-app.use("/static", express.static(path.join(frontendPath, "static")));
-
-// 2. Serve the rest of the build folder (favicons, manifest, etc.)
+// 1. Serve ALL files in the build folder
 app.use(express.static(frontendPath));
 
-// 3. FALLBACK: Only serve index.html if the request is NOT for a file (no dot in filename)
-// and NOT an API call. This prevents serving HTML for missing .js files.
-app.get(/^(?!\/api|.*\.).+/, (req, res) => {
-  res.sendFile(path.join(frontendPath, "index.html"));
-});
+// 2. Explicitly serve static assets to prevent 404s
+app.use("/static", express.static(path.join(frontendPath, "static")));
 
-// For the root path "/"
-app.get("/", (req, res) => {
+// 3. Catch-all for React Router
+// This ensures that any deep links (like /login or /profile) return index.html
+app.get("*", (req, res) => {
+  // If the request looks like a file (has a dot) and wasn't found, don't send index.html
+  if (req.path.includes(".") || req.path.startsWith("/api")) {
+    return res.status(404).send("Not found");
+  }
   res.sendFile(path.join(frontendPath, "index.html"));
 });
 
