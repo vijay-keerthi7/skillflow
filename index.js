@@ -12,35 +12,27 @@ import authRoutes from "./routes/authRoutes.js";
 import messageRoutes from "./routes/messageRoutes.js";
 import Message from "./models/Message.js";
 
-/* ---------------- ES MODULE dirname fix ---------------- */
+// ----------- ES MODULE __dirname fix -----------
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 dotenv.config();
 const app = express();
 
-/* ---------------- MIDDLEWARE ---------------- */
+// ----------- Middleware -----------
 app.use(express.json({ limit: "15mb" }));
 app.use(express.urlencoded({ extended: true }));
 
-/* ---------------- CORS ---------------- */
-app.use(cors({
-  origin: true, // automatically allows same-origin + Azure
-  credentials: true
-}));
+// ----------- CORS (allow all origins) -----------
+app.use(cors({ origin: true, credentials: true }));
 
-/* ---------------- HTTP & SOCKET ---------------- */
+// ----------- HTTP & Socket Setup -----------
 const server = http.createServer(app);
-
-const io = new Server(server, {
-  cors: {
-    origin: true,
-    credentials: true
-  }
-});
+const io = new Server(server, { cors: { origin: true, credentials: true } });
 
 export { io };
 
+// ----------- Socket Logic -----------
 const userSocketMap = {};
 
 io.on("connection", (socket) => {
@@ -100,24 +92,26 @@ io.on("connection", (socket) => {
   });
 });
 
-/* ---------------- DATABASE ---------------- */
-mongoose.connect(process.env.MONGO_URI)
+// ----------- Database -----------
+mongoose
+  .connect(process.env.MONGO_URI)
   .then(() => console.log("✅ MongoDB connected"))
   .catch((err) => console.error("MongoDB error:", err));
 
-/* ---------------- API ROUTES ---------------- */
+// ----------- API Routes -----------
 app.use("/api/auth", authRoutes);
 app.use("/api/messages", messageRoutes);
 
-/* ---------------- FRONTEND SERVING ---------------- */
+// ----------- Serve React Frontend -----------
 const frontendPath = path.join(__dirname, "frontend", "build");
 app.use(express.static(frontendPath));
 
+// Catch all other routes and send React index.html
 app.get("*", (req, res) => {
   res.sendFile(path.join(frontendPath, "index.html"));
 });
 
-/* ---------------- SERVER START ---------------- */
+// ----------- Start Server -----------
 const PORT = process.env.PORT || 8080;
 server.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
