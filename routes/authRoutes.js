@@ -34,7 +34,9 @@ router.post('/register', async (req, res) => {
 
 // Login Route
 router.post('/login', async (req, res) => {
+  console.log("DEBUG: Login endpoint reached!");
   try {
+    console.log("DEBUG: Login endpoint reached in try block!");
     const { email, password } = req.body;
 
     // 1. Find user
