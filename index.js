@@ -23,18 +23,20 @@ const app = express();
 app.use(express.json({ limit: "15mb" }));
 app.use(express.urlencoded({ extended: true }));
 
-// ----------- CORS (allow all origins) -----------
+// ----------- CORS -----------
 app.use(cors({ origin: true, credentials: true }));
 
 // ----------- HTTP & Socket Setup -----------
 const server = http.createServer(app);
 const io = new Server(server, { cors: { origin: true, credentials: true } });
 
-export { io };
+// Initialize the map BEFORE exporting it
+const userSocketMap = {}; 
 
-// ----------- Socket Logic -----------
+// Export both once at the same time to avoid "Duplicate Export" errors
 export { io, userSocketMap };
 
+// ----------- Socket Logic -----------
 io.on("connection", (socket) => {
   const { userId } = socket.handshake.query;
 
@@ -103,7 +105,8 @@ app.use("/api/auth", authRoutes);
 app.use("/api/messages", messageRoutes);
 
 // ----------- Serve React Frontend -----------
-const frontendPath = path.join(__dirname, "frontend", "build");
+// Using path.resolve to handle Windows directory separators better
+const frontendPath = path.resolve(__dirname, "frontend", "build");
 app.use(express.static(frontendPath));
 
 // Catch all other routes and send React index.html
@@ -112,7 +115,8 @@ app.get("*", (req, res) => {
 });
 
 // ----------- Start Server -----------
-const PORT = process.env.PORT ;
+// Azure Windows requires process.env.PORT (which is a named pipe)
+const PORT = process.env.PORT || 8080;
 server.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
 });
