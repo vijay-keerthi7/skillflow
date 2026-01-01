@@ -30,10 +30,10 @@ app.use(cors({ origin: true, credentials: true }));
 const server = http.createServer(app);
 const io = new Server(server, { cors: { origin: true, credentials: true } });
 
-// Initialize the map BEFORE exporting it
+// Define the map
 const userSocketMap = {}; 
 
-// Export both once at the same time to avoid "Duplicate Export" errors
+// SINGLE EXPORT: Removed any duplicate "export { io }" from above
 export { io, userSocketMap };
 
 // ----------- Socket Logic -----------
@@ -95,6 +95,7 @@ io.on("connection", (socket) => {
 });
 
 // ----------- Database -----------
+// Ensure MONGO_URI is set in Azure Portal > Configuration
 mongoose
   .connect(process.env.MONGO_URI)
   .then(() => console.log("✅ MongoDB connected"))
@@ -105,17 +106,19 @@ app.use("/api/auth", authRoutes);
 app.use("/api/messages", messageRoutes);
 
 // ----------- Serve React Frontend -----------
-// Using path.resolve to handle Windows directory separators better
 const frontendPath = path.resolve(__dirname, "frontend", "build");
 app.use(express.static(frontendPath));
 
-// Catch all other routes and send React index.html
-app.get("*", (req, res) => {
-  res.sendFile(path.join(frontendPath, "index.html"));
+// FIX: Changed "*" to "/*" to support Express 5 / path-to-regexp strictness
+app.get("/*", (req, res) => {
+  res.sendFile(path.join(frontendPath, "index.html"), (err) => {
+    if (err) {
+      res.status(500).send("Error loading index.html: " + err.message);
+    }
+  });
 });
 
 // ----------- Start Server -----------
-// Azure Windows requires process.env.PORT (which is a named pipe)
 const PORT = process.env.PORT || 8080;
 server.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
