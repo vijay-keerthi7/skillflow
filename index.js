@@ -20,7 +20,6 @@ dotenv.config();
 const app = express();
 
 // --- 1. MIDDLEWARE & DYNAMIC CORS ---
-// If on Azure, we allow the Azure URL, otherwise localhost
 const allowedOrigin = process.env.NODE_ENV === 'production' 
     ? "https://whatsap2-fwagd4daahanfqaw.ukwest-01.azurewebsites.net" 
     : "http://localhost:3000";
@@ -31,7 +30,6 @@ app.use(express.urlencoded({ limit: '15mb', extended: true }));
 
 // --- 2. SOCKET SETUP & USER TRACKING ---
 const userSocketMap = {}; 
-
 const server = http.createServer(app);
 const io = new Server(server, {
     cors: {
@@ -42,14 +40,12 @@ const io = new Server(server, {
 
 export { io, userSocketMap };
 
-// --- 3. SOCKET EVENT LISTENERS ---
+// --- 3. SOCKET EVENT LISTENERS (UNCHANGED) ---
 io.on('connection', (socket) => {
     const userId = socket.handshake.query.userId;
     if (userId && userId !== "undefined") {
         userSocketMap[userId] = socket.id;
-        console.log(`✅ User connected: ${userId}`);
     }
-
     io.emit("getOnlineUsers", Object.keys(userSocketMap));
 
     socket.on("typing", ({ senderId, receiverId }) => {
@@ -94,7 +90,6 @@ io.on('connection', (socket) => {
         if (userId) {
             delete userSocketMap[userId];
             io.emit("getOnlineUsers", Object.keys(userSocketMap));
-            console.log(`❌ User disconnected: ${userId}`);
         }
     });
 });
@@ -102,29 +97,28 @@ io.on('connection', (socket) => {
 // --- 4. DB CONNECTION ---
 mongoose.connect(process.env.MONGO_URI)
     .then(() => console.log("Connected to SkillFlow Database ✅"))
-    .catch((err) => console.log("DB Connection Error: ", err));
+    .catch((err) => console.error("DB Connection Error: ", err));
 
 // --- 5. ROUTES ---
 app.use('/api/auth', authRoutes);
 app.use('/api/messages', messageRoutes);
 
-// --- 6. FRONTEND SERVING (REWRITTEN PATH) ---
-// Since index.js is now in the ROOT, we go directly into frontend/build
+// --- 6. FRONTEND SERVING (REWRITTEN FOR EXPRESS v5) ---
 
+// Use a single, clear static directory pointer
+const buildPath = path.join(__dirname, 'frontend', 'build');
+app.use(express.static(buildPath));
 
-app.use(express.static("./frontend/build"));
-
-// 2. Explicitly serve static assets to prevent 404s
-// app.use("/static", express.static(path.join(frontendPath, "static")));
-app.use(express.static(path.join(__dirname, 'frontend', 'build')));
-// 3. Catch-all for React Router
-// This ensures that any deep links (like /login or /profile) return index.html
+/** * CRITICAL FIX: Express v5 requires named wildcards.
+ * Change '*' to '/*path' to prevent the PathError crash.
+ */
 app.get('/*path', (req, res) => { 
-  res.sendFile(path.join(__dirname, 'frontend', 'build', 'index.html'));
+  res.sendFile(path.join(buildPath, 'index.html'));
 });
 
 // --- 7. SERVER START ---
-const PORT = process.env.PORT || 8080; // Azure prefers 8080
-server.listen(PORT, () => {
+// Ensure the server binds to '0.0.0.0' for Azure networking compatibility
+const PORT = process.env.PORT || 8080; 
+server.listen(PORT, '0.0.0.0', () => {
     console.log(`🚀 Server listening on port ${PORT}`);
 });
