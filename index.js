@@ -24,37 +24,27 @@ app.use(express.json({ limit: "15mb" }));
 app.use(express.urlencoded({ extended: true }));
 
 /* ---------------- CORS ---------------- */
-// Allow frontend origin dynamically or localhost
-const allowedOrigin =
-  process.env.NODE_ENV === "production"
-    ? "https://chathere-b4bxbdfyh0g8ejfj.canadacentral-01.azurewebsites.net"
-    : "http://localhost:3000";
-
-app.use(
-  cors({
-    origin: allowedOrigin,
-    credentials: true,
-  })
-);
+app.use(cors({
+  origin: true, // automatically allows same-origin + Azure
+  credentials: true
+}));
 
 /* ---------------- HTTP & SOCKET ---------------- */
 const server = http.createServer(app);
 
 const io = new Server(server, {
   cors: {
-    origin: allowedOrigin,
-    methods: ["GET", "POST"],
-    credentials: true,
-  },
+    origin: true,
+    credentials: true
+  }
 });
 
 export { io };
 
-/* ---------------- SOCKET LOGIC ---------------- */
 const userSocketMap = {};
 
 io.on("connection", (socket) => {
-  const userId = socket.handshake.query.userId;
+  const { userId } = socket.handshake.query;
 
   if (userId && userId !== "undefined") {
     userSocketMap[userId] = socket.id;
@@ -79,7 +69,6 @@ io.on("connection", (socket) => {
         { senderId, receiverId, status: { $ne: "read" } },
         { $set: { status: "read" } }
       );
-
       const target = userSocketMap[senderId];
       if (target) io.to(target).emit("messagesRead", { readerId: receiverId });
     } catch (err) {
@@ -94,10 +83,8 @@ io.on("connection", (socket) => {
   socket.on("deleteMessage", async ({ messageId, receiverId }) => {
     try {
       await Message.findByIdAndDelete(messageId);
-
       const target = userSocketMap[receiverId];
       if (target) io.to(target).emit("messageDeleted", { messageId });
-
       socket.emit("messageDeleted", { messageId });
     } catch (err) {
       console.error("Delete message error:", err);
@@ -114,8 +101,7 @@ io.on("connection", (socket) => {
 });
 
 /* ---------------- DATABASE ---------------- */
-mongoose
-  .connect(process.env.MONGO_URI)
+mongoose.connect(process.env.MONGO_URI)
   .then(() => console.log("✅ MongoDB connected"))
   .catch((err) => console.error("MongoDB error:", err));
 
@@ -125,11 +111,8 @@ app.use("/api/messages", messageRoutes);
 
 /* ---------------- FRONTEND SERVING ---------------- */
 const frontendPath = path.join(__dirname, "frontend", "build");
-
-// Serve static files
 app.use(express.static(frontendPath));
 
-// Handle React routing, return index.html for all non-API requests
 app.get("*", (req, res) => {
   res.sendFile(path.join(frontendPath, "index.html"));
 });
