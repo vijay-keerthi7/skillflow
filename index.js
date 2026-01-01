@@ -33,7 +33,7 @@ const io = new Server(server, { cors: { origin: true, credentials: true } });
 export { io };
 
 // ----------- Socket Logic -----------
-const userSocketMap = {};
+export { io, userSocketMap };
 
 io.on("connection", (socket) => {
   const { userId } = socket.handshake.query;
