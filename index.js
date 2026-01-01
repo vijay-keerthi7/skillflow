@@ -116,12 +116,12 @@ app.use(express.static("./frontend/build"));
 
 // 2. Explicitly serve static assets to prevent 404s
 // app.use("/static", express.static(path.join(frontendPath, "static")));
-
+app.use(express.static(path.join(__dirname, 'frontend', 'build')));
 // 3. Catch-all for React Router
 // This ensures that any deep links (like /login or /profile) return index.html
-// app.get("*", (req, res) => {
-//     res.sendFile(path.resolve(__dirname, "frontend","build","index.html"));
-// });
+app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, 'frontend', 'build', 'index.html'));
+});
 
 // --- 7. SERVER START ---
 const PORT = process.env.PORT || 8080; // Azure prefers 8080
