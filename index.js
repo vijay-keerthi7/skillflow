@@ -22,7 +22,7 @@ const app = express();
 // --- 1. MIDDLEWARE & DYNAMIC CORS ---
 // If on Azure, we allow the Azure URL, otherwise localhost
 const allowedOrigin = process.env.NODE_ENV === 'production' 
-    ? "https://skillflow-cndsh4cjargth6dp.canadacentral-01.azurewebsites.net" 
+    ? "https://whatsap2-fwagd4daahanfqaw.ukwest-01.azurewebsites.net" 
     : "http://localhost:3000";
 
 app.use(cors({ origin: allowedOrigin, credentials: true }));
