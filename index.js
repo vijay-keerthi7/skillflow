@@ -33,7 +33,7 @@ const io = new Server(server, { cors: { origin: true, credentials: true } });
 // Define the map
 const userSocketMap = {}; 
 
-// SINGLE EXPORT: Corrected to avoid duplicate export errors
+// SINGLE EXPORT
 export { io, userSocketMap };
 
 // ----------- Socket Logic -----------
@@ -108,17 +108,10 @@ app.use("/api/messages", messageRoutes);
 const frontendPath = path.resolve(__dirname, "frontend", "build");
 app.use(express.static(frontendPath));
 
-// FINAL FIX: Catch-all route using Express 5 compatible syntax
-// This matches everything that isn't an API route and serves index.html
-app.get("*", (req, res, next) => {
-  if (req.path.startsWith('/api')) {
-    return next();
-  }
-  res.sendFile(path.join(frontendPath, "index.html"), (err) => {
-    if (err) {
-      res.status(500).send("Error loading index.html: " + err.message);
-    }
-  });
+// ----------- FIX FOR EXPRESS 5 -----------
+// This regex matches any path and serves the index.html
+app.get(/^(?!\/api).+/, (req, res) => {
+  res.sendFile(path.join(frontendPath, "index.html"));
 });
 
 // ----------- Start Server -----------
