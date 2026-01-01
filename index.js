@@ -23,20 +23,27 @@ const app = express();
 app.use(express.json({ limit: "15mb" }));
 app.use(express.urlencoded({ extended: true }));
 
-/* ---------------- CORS (SAFE & DYNAMIC) ---------------- */
+/* ---------------- CORS ---------------- */
+// Allow frontend origin dynamically or localhost
+const allowedOrigin =
+  process.env.NODE_ENV === "production"
+    ? "https://chathere-b4bxbdfyh0g8ejfj.canadacentral-01.azurewebsites.net"
+    : "http://localhost:3000";
+
 app.use(
   cors({
-    origin: true, // allow same-origin + Azure domain automatically
+    origin: allowedOrigin,
     credentials: true,
   })
 );
 
-/* ---------------- HTTP & SOCKET SETUP ---------------- */
+/* ---------------- HTTP & SOCKET ---------------- */
 const server = http.createServer(app);
 
 const io = new Server(server, {
   cors: {
-    origin: true,
+    origin: allowedOrigin,
+    methods: ["GET", "POST"],
     credentials: true,
   },
 });
@@ -47,7 +54,7 @@ export { io };
 const userSocketMap = {};
 
 io.on("connection", (socket) => {
-  const { userId } = socket.handshake.query;
+  const userId = socket.handshake.query.userId;
 
   if (userId && userId !== "undefined") {
     userSocketMap[userId] = socket.id;
@@ -116,11 +123,13 @@ mongoose
 app.use("/api/auth", authRoutes);
 app.use("/api/messages", messageRoutes);
 
-/* ---------------- FRONTEND SERVING (IMPORTANT FIX) ---------------- */
+/* ---------------- FRONTEND SERVING ---------------- */
 const frontendPath = path.join(__dirname, "frontend", "build");
 
+// Serve static files
 app.use(express.static(frontendPath));
 
+// Handle React routing, return index.html for all non-API requests
 app.get("*", (req, res) => {
   res.sendFile(path.join(frontendPath, "index.html"));
 });
