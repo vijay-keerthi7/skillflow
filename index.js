@@ -33,7 +33,7 @@ const io = new Server(server, { cors: { origin: true, credentials: true } });
 // Define the map
 const userSocketMap = {}; 
 
-// SINGLE EXPORT: Removed any duplicate "export { io }" from above
+// SINGLE EXPORT: Corrected to avoid duplicate export errors
 export { io, userSocketMap };
 
 // ----------- Socket Logic -----------
@@ -95,7 +95,6 @@ io.on("connection", (socket) => {
 });
 
 // ----------- Database -----------
-// Ensure MONGO_URI is set in Azure Portal > Configuration
 mongoose
   .connect(process.env.MONGO_URI)
   .then(() => console.log("✅ MongoDB connected"))
@@ -109,8 +108,12 @@ app.use("/api/messages", messageRoutes);
 const frontendPath = path.resolve(__dirname, "frontend", "build");
 app.use(express.static(frontendPath));
 
-// FIX: Changed "*" to "/*" to support Express 5 / path-to-regexp strictness
-app.get("/:path*", (req, res) => {
+// FINAL FIX: Catch-all route using Express 5 compatible syntax
+// This matches everything that isn't an API route and serves index.html
+app.get("*", (req, res, next) => {
+  if (req.path.startsWith('/api')) {
+    return next();
+  }
   res.sendFile(path.join(frontendPath, "index.html"), (err) => {
     if (err) {
       res.status(500).send("Error loading index.html: " + err.message);
