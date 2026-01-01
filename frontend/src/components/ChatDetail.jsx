@@ -270,7 +270,7 @@ const handleImageSend = async (base64Data) => {
     >
       <i className='bx bx-trash text-sm'></i>
     </button>
-  )}
+  )} 
 </div>
       </React.Fragment>
     );
